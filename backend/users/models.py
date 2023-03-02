@@ -4,7 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     username = models.CharField(
-        'Логин',
+        'Login',
         max_length=150,
         unique=True,
     )
@@ -14,11 +14,11 @@ class User(AbstractUser):
         unique=True,
     )
     first_name = models.CharField(
-        'Имя',
+        'Name',
         max_length=150,
     )
     last_name = models.CharField(
-        'Фамилия',
+        'Lastname',
         max_length=150,
     )
 
