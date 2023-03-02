@@ -36,73 +36,56 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    # @staticmethod
-    # def shopping_cart_add(model, user, recipe):
-    #     model_create, create = model.objects.get_or_create(
-    #         user=user, recipe=recipe
-    #     )
-    #     if create:
-    #         serializer = ShoppingCartSerializer()
-    #         return Response(
-    #             serializer.to_representation(instance=model_create),
-    #             status=status.HTTP_201_CREATED
-    #         )
+    @staticmethod
+    def favorite_and_shopping_cart_add(model, user, recipe):
+        model_create, create = model.objects.get_or_create(
+            user=user, recipe=recipe
+        )
+        if create:
+            if str(model) == 'FavoriteRecipe':
+                serializer = FavoriteRecipeSerializer()
+            else:
+                serializer = ShoppingCartSerializer()
+            return Response(
+                serializer.to_representation(instance=model_create),
+                status=status.HTTP_201_CREATED
+            )
 
-    # @staticmethod
-    # def shopping_cart_delete(model, user, recipe):
-    #     model.objects.filter(recipe=recipe, user=user).delete()
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
+    @staticmethod
+    def favorite_and_shopping_cart_delete(model, user, recipe):
+        model.objects.filter(recipe=recipe, user=user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # @staticmethod
-    # def favorite_add(model, user, favorite_recipe):
-    #     model_create, create = model.objects.get_or_create(
-    #         user=user, favorite_recipe=favorite_recipe
-    #     )
-    #     if create:
-    #         serializer = FavoriteRecipeSerializer()
-    #         return Response(
-    #             serializer.to_representation(instance=model_create),
-    #             status=status.HTTP_201_CREATED
-    #         )
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+    )
+    def favorite(self, request, pk):
+        user = request.user
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == 'POST':
+            return self.favorite_and_shopping_cart_add(
+                FavoriteRecipe, user, recipe)
+        if request.method == 'DELETE':
+            return self.favorite_and_shopping_cart_delete(
+                FavoriteRecipe, user, recipe)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    # @staticmethod
-    # def favorite_delete(model, user, favorite_recipe):
-    #     model.objects.filter(
-    #         favorite_recipe=favorite_recipe, user=user
-    #     ).delete()
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
-
-    # @action(
-    #     methods=['POST', 'DELETE'],
-    #     detail=True,
-    #     # filterset_class=RecipeFilter
-    # )
-    # def favorite(self, request, pk):
-    #     user = request.user
-    #     recipe = get_object_or_404(Recipe, pk=pk)
-    #     if request.method == 'POST':
-    #         return self.favorite_and_shopping_cart_add(
-    #             FavoriteRecipe, user, recipe)
-    #     if request.method == 'DELETE':
-    #         return self.favorite_and_shopping_cart_delete(
-    #             FavoriteRecipe, user, recipe)
-    #     return Response(status=status.HTTP_400_BAD_REQUEST)
-
-    # @action(
-    #     methods=['POST', 'DELETE'],
-    #     detail=True,
-    #     permission_classes=(IsAuthenticated,)
-    # )
-    # def shopping_cart(self, request, pk=None):
-    #     user = request.user
-    #     recipe = get_object_or_404(Recipe, pk=pk)
-    #     if request.method == 'POST':
-    #         return self.favorite_and_shopping_cart_add(
-    #             ShoppingCart, user, recipe)
-    #     if request.method == 'DELETE':
-    #         return self.favorite_and_shopping_cart_delete(
-    #             ShoppingCart, user, recipe)
-    #     return Response(status=status.HTTP_400_BAD_REQUEST)
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        permission_classes=(IsAuthenticated,)
+    )
+    def shopping_cart(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == 'POST':
+            return self.favorite_and_shopping_cart_add(
+                ShoppingCart, user, recipe)
+        if request.method == 'DELETE':
+            return self.favorite_and_shopping_cart_delete(
+                ShoppingCart, user, recipe)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False,
@@ -210,76 +193,4 @@ class SubscribeViewSet(CreateDestroyViewSet):
             user=request.user,
             author_id=user_id
         ).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class FavoriteRecipeViewSet(CreateDestroyViewSet):
-    serializer_class = FavoriteRecipeSerializer
-
-    def get_queryset(self):
-        user = self.request.user.id
-        return FavoriteRecipe.objects.filter(user=user)
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['recipe_id'] = self.kwargs.get('recipe_id')
-        return context
-
-    def perform_create(self, serializer):
-        serializer.save(
-            user=self.request.user,
-            favorite_recipe=get_object_or_404(
-                Recipe,
-                id=self.kwargs.get('recipe_id')
-            )
-        )
-
-    @action(methods=('delete',), detail=True)
-    def delete(self, request, recipe_id):
-        u = request.user
-        if not u.favorite.select_related(
-                'favorite_recipe').filter(
-                    favorite_recipe_id=recipe_id).exists():
-            return Response({'errors': 'Рецепт не в избранном'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        get_object_or_404(
-            FavoriteRecipe,
-            user=request.user,
-            favorite_recipe_id=recipe_id).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class ShoppingCartViewSet(CreateDestroyViewSet):
-    serializer_class = ShoppingCartSerializer
-
-    def get_queryset(self):
-        user = self.request.user.id
-        return ShoppingCart.objects.filter(user=user)
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['recipe_id'] = self.kwargs.get('recipe_id')
-        return context
-
-    def perform_create(self, serializer):
-        serializer.save(
-            user=self.request.user,
-            recipe=get_object_or_404(
-                Recipe,
-                id=self.kwargs.get('recipe_id')
-            )
-        )
-
-    @action(methods=('delete',), detail=True)
-    def delete(self, request, recipe_id):
-        u = request.user
-        if not u.shopping_cart.select_related(
-                'recipe').filter(
-                    recipe_id=recipe_id).exists():
-            return Response({'errors': 'Рецепта нет в корзине'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        get_object_or_404(
-            ShoppingCart,
-            user=request.user,
-            recipe=recipe_id).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

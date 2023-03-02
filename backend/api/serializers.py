@@ -155,13 +155,15 @@ class RecipeEditSerializer(serializers.ModelSerializer):
         return data
 
     def create_ingredients(self, ingredients, recipe):
-        for ingredient in ingredients:
-            IngredientAmount.objects.bulk_create([
-                IngredientAmount(
-                    recipe=recipe,
-                    ingredient_id=ingredient.get('id'),
-                    amount=ingredient.get('amount'),)
-            ])
+        recipe_ingredients = [
+            IngredientAmount(
+                ingredient=ingredient['id'],
+                recipe=recipe,
+                amount=ingredient['amount']
+            )
+            for ingredient in ingredients
+        ]
+        IngredientAmount.objects.bulk_create(recipe_ingredients)
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
@@ -236,7 +238,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(
         source='author.last_name',
         read_only=True)
-    recipes = serializers.SerializerMethodField()
+    recipes = SubscribeRecipeSerializer(many=True)
     is_subscribed = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField(
         source='author.recipe.count')
@@ -257,20 +259,11 @@ class SubscribeSerializer(serializers.ModelSerializer):
                 'errors': 'Вы уже подписаны на данного пользователя'})
         return data
 
-    def get_recipes(self, obj):
-        recipes = obj.author.recipe.all()
-        return SubscribeRecipeSerializer(
-            recipes,
-            many=True).data
-
     def get_is_subscribed(self, obj):
-        subscribe = Subscribe.objects.filter(
+        return Subscribe.objects.filter(
             user=self.context.get('request').user,
             author=obj.author
-        )
-        if subscribe:
-            return True
-        return False
+        ).exists()
 
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
