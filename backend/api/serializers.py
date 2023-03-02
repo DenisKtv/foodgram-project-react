@@ -264,13 +264,13 @@ class SubscribeSerializer(serializers.ModelSerializer):
             many=True).data
 
     def get_is_subscribed(self, obj):
-        subscribe = Subscribe.objects.filter(
+        return Subscribe.objects.filter(
             user=self.context.get('request').user,
             author=obj.author
-        )
-        if subscribe:
-            return True
-        return False
+        ).exists
+        # if subscribe:
+        #     return True
+        # return False
 
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
