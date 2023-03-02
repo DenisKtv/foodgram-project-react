@@ -105,9 +105,9 @@ docker-compose exec backend python manage.py collectstatic --no-input
 ## Сайт
 Сайт доступен по ссылке:
 [hhttp://51.250.97.108/recipes](http://51.250.97.108/recipes)
-Для теста админки:
-mail: zxc@zxc.com
-password: zxc
+> Для теста админки:
+> mail: zxc@zxc.com
+> password: zxc
 
 ## Документация к API
 API документация доступна по ссылке (создана с помощью redoc):
