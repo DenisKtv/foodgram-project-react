@@ -123,10 +123,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         cart = user.shopping_cart.select_related('recipe').values(
             ingredient_name, ingredient_unit).annotate(Sum(
                 recipe_amount)).order_by(ingredient_name)
-        for _ in cart:
+        for item in cart:
             text += (
-                f'{_[ingredient_name]} ({_[ingredient_unit]})'
-                f' — {_[amount_sum]}\n'
+                f'{item[ingredient_name]} ({item[ingredient_unit]})'
+                f' — {item[amount_sum]}\n'
             )
         response = HttpResponse(text, content_type='text/plain')
         filename = 'shopping_list.txt'
