@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from .filters import IngredientFilter, RecipesFilter
 from .mixins import CreateDestroyViewSet
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (LiteRecipeSerializer, IngredientSerializer,
+from .serializers import (IngredientSerializer, LiteRecipeSerializer,
                           RecipeEditSerializer, RecipeReadSerializer,
                           SetPasswordSerializer, SubscribeSerializer,
                           TagSerializer, UserCreateSerializer,
@@ -63,9 +63,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             return self.favorite_and_shopping_cart_add(
                 FavoriteRecipe, request, pk)
-        else:
-            return self.favorite_and_shopping_cart_delete(
-                FavoriteRecipe, request, pk)
+        return self.favorite_and_shopping_cart_delete(
+            FavoriteRecipe, request, pk)
 
     @action(
         methods=['POST', 'DELETE'],
@@ -76,9 +75,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             return self.favorite_and_shopping_cart_add(
                 ShoppingCart, request, pk)
-        else:
-            return self.favorite_and_shopping_cart_delete(
-                ShoppingCart, request, pk)
+        return self.favorite_and_shopping_cart_delete(
+            ShoppingCart, request, pk)
 
     @action(
         detail=False,
