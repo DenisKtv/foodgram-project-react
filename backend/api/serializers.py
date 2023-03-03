@@ -266,59 +266,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
         ).exists()
 
 
-class FavoriteRecipeSerializer(serializers.ModelSerializer):
-    id = serializers.ReadOnlyField(
-        source='favorite_recipe.id',
-    )
-    name = serializers.ReadOnlyField(
-        source='favorite_recipe.name',
-    )
-    image = serializers.CharField(
-        source='favorite_recipe.image',
-        read_only=True,
-    )
-    cooking_time = serializers.ReadOnlyField(
-        source='favorite_recipe.cooking_time',
-    )
-
+class LiteRecipeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = FavoriteRecipe
+        model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
-
-    def validate(self, data):
-        user = self.context.get('request').user
-        recipe = self.context.get('recipe_id')
-        if FavoriteRecipe.objects.filter(user=user,
-                                         favorite_recipe=recipe).exists():
-            raise serializers.ValidationError({
-                'errors': 'Рецепт уже в избранном'})
-        return data
-
-
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    id = serializers.ReadOnlyField(
-        source='recipe.id',
-    )
-    name = serializers.ReadOnlyField(
-        source='recipe.name',
-    )
-    image = serializers.CharField(
-        source='recipe.image',
-        read_only=True,
-    )
-    cooking_time = serializers.ReadOnlyField(
-        source='recipe.cooking_time',
-    )
-
-    class Meta:
-        model = ShoppingCart
-        fields = ('id', 'name', 'image', 'cooking_time')
-
-    def validate(self, data):
-        user = self.context.get('request').user
-        recipe = self.context.get('recipe_id')
-        if ShoppingCart.objects.filter(user=user,
-                                       recipe=recipe).exists():
-            raise serializers.ValidationError({
-                'errors': 'Рецепт уже добавлен в список покупок'})
-        return data

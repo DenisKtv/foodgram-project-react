@@ -14,11 +14,11 @@ from rest_framework.response import Response
 from .filters import IngredientFilter, RecipesFilter
 from .mixins import CreateDestroyViewSet
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
+from .serializers import (LiteRecipeSerializer, IngredientSerializer,
                           RecipeEditSerializer, RecipeReadSerializer,
-                          SetPasswordSerializer, ShoppingCartSerializer,
-                          SubscribeSerializer, TagSerializer,
-                          UserCreateSerializer, UserListSerializer)
+                          SetPasswordSerializer, SubscribeSerializer,
+                          TagSerializer, UserCreateSerializer,
+                          UserListSerializer)
 
 User = get_user_model()
 
@@ -37,23 +37,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     @staticmethod
-    def favorite_and_shopping_cart_add(model, user, recipe):
-        model_create, create = model.objects.get_or_create(
-            user=user, recipe=recipe
-        )
-        if create:
-            if str(model) == 'FavoriteRecipe':
-                serializer = FavoriteRecipeSerializer()
-            else:
-                serializer = ShoppingCartSerializer()
-            return Response(
-                serializer.to_representation(instance=model_create),
-                status=status.HTTP_201_CREATED
-            )
+    def favorite_and_shopping_cart_add(self, model, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        user = self.request.user
+        if model.objects.filter(recipe=recipe, user=user).exists():
+            return Response({'errors: Рецепт уже добавлен'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        model.objects.create(recipe=recipe, user=user)
+        serializer = LiteRecipeSerializer(recipe)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
     @staticmethod
-    def favorite_and_shopping_cart_delete(model, user, recipe):
-        model.objects.filter(recipe=recipe, user=user).delete()
+    def favorite_and_shopping_cart_delete(self, model, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        user = self.request.user
+        obj = get_object_or_404(model, recipe=recipe, user=user)
+        obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -61,31 +60,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
     )
     def favorite(self, request, pk):
-        user = request.user
-        recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'POST':
             return self.favorite_and_shopping_cart_add(
-                FavoriteRecipe, user, recipe)
-        if request.method == 'DELETE':
+                FavoriteRecipe, request, pk)
+        else:
             return self.favorite_and_shopping_cart_delete(
-                FavoriteRecipe, user, recipe)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+                FavoriteRecipe, request, pk)
 
     @action(
         methods=['POST', 'DELETE'],
         detail=True,
         permission_classes=(IsAuthenticated,)
     )
-    def shopping_cart(self, request, pk=None):
-        user = request.user
-        recipe = get_object_or_404(Recipe, pk=pk)
+    def shopping_cart(self, request, pk):
         if request.method == 'POST':
             return self.favorite_and_shopping_cart_add(
-                ShoppingCart, user, recipe)
-        if request.method == 'DELETE':
+                ShoppingCart, request, pk)
+        else:
             return self.favorite_and_shopping_cart_delete(
-                ShoppingCart, user, recipe)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+                ShoppingCart, request, pk)
 
     @action(
         detail=False,
