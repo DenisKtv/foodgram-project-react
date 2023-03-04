@@ -238,7 +238,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(
         source='author.last_name',
         read_only=True)
-    recipes = SubscribeRecipeSerializer(many=True)
+    recipes = serializers.SerializerMethodField()
     is_subscribed = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField(
         source='author.recipe.count')
@@ -259,6 +259,21 @@ class SubscribeSerializer(serializers.ModelSerializer):
                 'errors': 'Вы уже подписаны на данного пользователя'})
         return data
 
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        recipes = Recipe.objects.filter(author=obj.author)
+        limit = request.GET.get('recipes_limit')
+        if limit:
+            recipes = recipes[:int(limit)]
+        return RecipeFieldSerializer(
+            recipes,
+            many=True,
+            context={'request': request}
+        ).data
+
+    def get_recipes_count(self, obj):
+        return Recipe.objects.filter(author=obj.author).count()
+
     def get_is_subscribed(self, obj):
         return Subscribe.objects.filter(
             user=self.context.get('request').user,
@@ -270,3 +285,14 @@ class LiteRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
+
+
+class RecipeFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = (
+            'id',
+            'name',
+            'image',
+            'cooking_time',
+        )

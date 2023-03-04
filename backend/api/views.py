@@ -13,6 +13,7 @@ from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipesFilter
 from .mixins import CreateDestroyViewSet
+from .pagination import CustomPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (IngredientSerializer, LiteRecipeSerializer,
                           RecipeEditSerializer, RecipeReadSerializer,
@@ -27,6 +28,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
     filterset_class = RecipesFilter
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
@@ -69,6 +71,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(
         methods=['POST', 'DELETE'],
         detail=True,
+        pagination_class=None,
         permission_classes=(IsAuthenticated,)
     )
     def shopping_cart(self, request, pk):
@@ -126,6 +129,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     permission_classes = (IsAuthenticatedOrReadOnly,)
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.action == 'set_password':
@@ -143,17 +147,18 @@ class CustomUserViewSet(UserViewSet):
         detail=False,
         permission_classes=(IsAuthenticated,))
     def subscriptions(self, request):
-        queryset = Subscribe.objects.filter(user=request.user)
+        user = request.user
+        queryset = Subscribe.objects.filter(user=user)
         pages = self.paginate_queryset(queryset)
         serializer = SubscribeSerializer(
-            pages,
-            many=True,
-            context={'request': request},)
+            pages, many=True, context={'request': request}
+        )
         return self.get_paginated_response(serializer.data)
 
 
 class SubscribeViewSet(CreateDestroyViewSet):
     serializer_class = SubscribeSerializer
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         return self.request.user.follower.all()
